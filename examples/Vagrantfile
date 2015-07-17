@@ -1,0 +1,46 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+defaultbox = "ubuntu/trusty64"
+box = ENV['BOX'] || defaultbox
+
+ENV['ANSIBLE_ROLES_PATH'] = "../../"
+
+Vagrant.configure(2) do |config|
+
+  config.vm.box = box
+
+  config.vm.define "barman" do |barman_cfg|
+    barman_cfg.vm.hostname = "barman"
+    barman_cfg.vm.network "private_network", type: "dhcp"
+    barman_cfg.vm.provider :virtualbox do |v|
+      v.name = "barman"
+      # v.gui = true
+    end
+  end
+
+  config.vm.define "postgres" do |postgres_cfg|
+    postgres_cfg.vm.hostname = "postgres"
+    postgres_cfg.vm.network "private_network", type: "dhcp"
+    postgres_cfg.vm.provider :virtualbox do |v|
+      v.memory = 4096
+      v.name = "postgres"
+      # v.gui = true
+    end
+  end
+
+  config.vm.provision :ansible do |ansible|
+    ansible.playbook = "vagrant.yml"
+    ansible.sudo = true
+    # ansible.tags = ['debug']
+    ansible.groups = {
+      "vagrant" => ["barman", "postgres"],
+    }
+    ansible.extra_vars = {
+      ansible_ssh_user: 'vagrant',
+      hbase_standalone:   true,
+    }
+
+  end
+
+end

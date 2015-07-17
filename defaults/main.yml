@@ -1,0 +1,22 @@
+postgresql_apt_key_id: ACCC4CF8
+postgresql_apt_key_url: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+postgresql_apt_repository: 'deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main'
+
+postgres_host_name: "{{ postgres_host }}"
+postgres_host_description: "{{ postgres_host_name }} PostgreSQL Database for {{ postgres_host }}"
+postgres_version: "9.3"
+postgres_include_dir: conf.d
+# postgres_include_dir_regex: '{{ postgres_include_dir | replace(".","\.") }}'
+postgres_include_dir_fullpath: "/etc/postgresql/{{ postgres_version }}/main/{{ postgres_include_dir }}"
+
+barman_ip: "{{ ansible_default_ipv4.address }}"
+postgres_barman_pass: "{{ 'barman' | md5 }}"
+
+# wal_level archive or hot_standby
+postgres_wal_level: hot_standby
+
+postgres_confirm_service_restart: yes
+
+postgres_restart_params:
+  archive_mode: "on"
+  wal_level: "{{ postgres_wal_level }}"

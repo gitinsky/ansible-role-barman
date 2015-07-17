@@ -1,0 +1,83 @@
+- name: install ansible management requirements
+  apt: name={{ item }} cache_valid_time=3600 update_cache=yes
+  with_items:
+    - libpq-dev
+    - python-psycopg2
+  delegate_to: "{{ postgres_host }}"
+
+- name: read configuration parameters
+  shell: barman show-server all
+  changed_when: false
+  register: config_all_raw
+  tags: psql
+
+- name: import configuration to a fact
+  set_fact:
+    config_all: "{{ config_all_raw.stdout.replace('\t','    ') | from_yaml }}"
+  tags: psql
+
+- name: check incoming_wals_directory
+  debug: var=config_all['Server main'].incoming_wals_directory
+  tags: psql
+
+- name: create {{ postgres_include_dir_fullpath }}
+  file: dest={{ postgres_include_dir_fullpath }} state=directory
+  delegate_to: "{{ postgres_host }}"
+  tags: psql
+
+- name: enable {{ postgres_include_dir }} configs inclusion
+  lineinfile: dest="/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
+              regexp="(^\s*)#*(\s*include_dir\s*=\s*')[^']*('.*$)"
+              backrefs=on
+              line='\1\2{{ postgres_include_dir }}\3'
+              backup=yes
+  delegate_to: "{{ postgres_host }}"
+  tags: psql
+
+- name: enable Continuous WAL archiving
+  template: dest={{ postgres_include_dir_fullpath }}/03_barman.conf src=postgres/barman.conf
+  delegate_to: "{{ postgres_host }}"
+  register: delegate_postgres_reload1
+  tags: psql
+
+- name: Allow connections
+  lineinfile: dest=/etc/postgresql/9.3/main/pg_hba.conf
+              state=present
+              regexp="\s*host\s+all\s+barman\s+{{ barman_ip }}\/32"
+              line="host     all             barman          {{ barman_ip }}/32      md5"
+  register: delegate_postgres_reload2
+  delegate_to: "{{ postgres_host }}"
+  tags: psql
+
+- name: delegate postgresql reload
+  service: name=postgresql state=reloaded
+  delegate_to: "{{ postgres_host }}"
+  when: delegate_postgres_reload1.changed or delegate_postgres_reload2.changed
+  tags: psql
+
+- name: check if restart is required
+  command: psql -At -c "SELECT current_setting('{{ item.key }}') <> '{{ item.value }}';"
+  with_dict: postgres_restart_params
+  register: postgres_restart_required
+  always_run: yes
+  ignore_errors: yes
+  changed_when: postgres_restart_required.stdout == 't' or postgres_restart_required|failed
+  delegate_to: "{{ postgres_host }}"
+  sudo_user: postgres
+  tags: psql
+
+- name: pause if restart requires confirmation
+  pause: prompt="Postgres service restart required and it is going to be performed in the next task!"
+  when: postgres_restart_required.changed and postgres_confirm_service_restart
+  tags: psql
+
+- name: delegate postgresql restart
+  service: name=postgresql state=restarted
+  delegate_to: "{{ postgres_host }}"
+  when: postgres_restart_required.changed
+  tags: psql
+
+- include: users.yml
+  tags: users
+
+# - debug: msg="'{{ postgres_include_dir_regex }}', '{{ postgres_include_dir }}'"

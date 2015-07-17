@@ -1,0 +1,39 @@
+- hosts: all
+
+- name: set up postgres
+  gather_facts: no
+  hosts: postgres
+  sudo: yes
+  tasks:
+
+    - name: install PostgreSQL, postgresql-contrib and postgres ansible management requirements
+      apt: name={{ item }} cache_valid_time=3600 update_cache=yes
+      with_items:
+        - postgresql-9.3
+        - postgresql-contrib-9.3
+        - libpq-dev
+        - python-psycopg2
+
+    - name: set listen address to *
+      lineinfile: dest="/etc/postgresql/9.3/main/postgresql.conf"
+                  regexp="(^\s*)#*(\s*listen_addresses\s*=\s*')[^']*('.*$)"
+                  backrefs=on
+                  line="\1\2*\3"
+                  backup=yes
+
+    - service: name=postgresql state=started
+#     - postgresql_db: name=barmantest
+#       sudo_user: postgres
+#     - postgresql_user: db=barmantest name=barman password=barman
+#       sudo_user: postgres
+#
+
+- hosts: barman
+  sudo: yes
+  gather_facts: no
+  vars:
+      postgres_host: "{{ hostvars.postgres.ansible_eth1.ipv4.address }}"
+      # postgres_host_name: postgres_vagrant
+      barman_ip: "{{ hostvars.barman.ansible_eth1.ipv4.address }}"
+  roles:
+    - barman

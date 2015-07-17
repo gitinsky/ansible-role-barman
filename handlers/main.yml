@@ -1,0 +1,7 @@
+- name: delegate postgresql reload
+  service: name=postgresql state=reloaded
+  delegate_to: "{{ postgres_host }}"
+
+- name: delegate postgres restart
+  service: name=postgresql state=restarted
+  delegate_to: "{{ postgres_host }}"

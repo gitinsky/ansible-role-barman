@@ -1,0 +1,74 @@
+---
+- name: Barman | Add PostgreSQL repository apt-key
+  apt_key:
+    id: "{{ postgresql_apt_key_id }}"
+    url: "{{ postgresql_apt_key_url }}"
+    state: present
+  when: postgresql_apt_key_url and postgresql_apt_key_id and ansible_distribution_version|version_compare(14.04, '<')
+
+- name: Barman | Add PostgreSQL repository
+  apt_repository:
+    repo: "{{ postgresql_apt_repository }}"
+    state: present
+  when: postgresql_apt_repository and ansible_distribution_version|version_compare(14.04, '<')
+
+- name: Barman | Install Barman
+  apt:
+    name: "{{ item }}"
+    state: "present"
+  with_items:
+    - barman
+    # - postgresql-client
+
+- name: create /etc/barman.d
+  file: dest=/etc/barman.d state=directory
+
+- name: deploy global configuration
+  template: src=barman.conf dest=/etc/barman.conf
+
+- name: deploy server specific configuration
+  template: src=barman.d/template.conf dest=/etc/barman.d/{{ postgres_host_name }}.conf
+
+- name: setup postgres server and access
+  include: postgres.yml
+
+- name: check if there's a backup
+  shell: barman show-backup {{ postgres_host_name }} latest
+  register: latest_backup
+  changed_when: latest_backup.rc != 0
+  failed_when: false
+  sudo_user: barman
+
+- name: initiate backup for server if there're still 0 of them
+  shell: barman backup {{ postgres_host_name }} | logger -t barman_{{ postgres_host_name }}
+  sudo_user: barman
+  when: latest_backup.changed
+
+- name: check requirements
+  shell: "barman check {{ postgres_host_name }}"
+  changed_when: false
+  sudo_user: barman
+
+- name: remove default cron to add log support
+  lineinfile: dest=/etc/cron.d/barman
+              state=absent
+              regexp='^\s*\*\s+\*\s+\*\s+\*\s+\*\s+barman\s*\[\s*-x\s*/usr/bin/barman\s*\]\s*&&\s*/usr/bin/barman\s*-q\s*cron\s?$'
+  tags: cron
+
+- name: replace default cron to add log support
+  cron:
+    name: "barman cron"
+    cron_file: barman
+    user: barman
+    job: "[ -x /usr/bin/barman ] cron 2>&1 | /usr/bin/logger -t barman"
+  tags: cron
+
+- name: add daily backups for all servers
+  cron:
+    hour: 4
+    minute: 4
+    name: "barman backup all"
+    cron_file: barman
+    user: barman
+    job: "[ -x /usr/bin/barman ] backup all 2>&1 | /usr/bin/logger -t barman"
+  tags: cron

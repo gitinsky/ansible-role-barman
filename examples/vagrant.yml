@@ -1,0 +1,8 @@
+- hosts: vagrant
+  sudo: yes
+  roles:
+    - vagrant-simple
+  tasks:
+
+    - name: now run 'ansible-playbook barman.yml'
+      debug: msg="now run 'ansible-playbook barman.yml'"
