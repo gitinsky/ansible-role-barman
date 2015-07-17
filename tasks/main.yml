@@ -60,7 +60,7 @@
     name: "barman cron"
     cron_file: barman
     user: barman
-    job: "[ -x /usr/bin/barman ] cron 2>&1 | /usr/bin/logger -t barman"
+    job: "/usr/bin/barman cron 2>&1 | /usr/bin/logger -t barman"
   tags: cron
 
 - name: add daily backups for all servers
@@ -70,5 +70,5 @@
     name: "barman backup all"
     cron_file: barman
     user: barman
-    job: "[ -x /usr/bin/barman ] backup all 2>&1 | /usr/bin/logger -t barman"
+    job: "/usr/bin/barman backup all 2>&1 | /usr/bin/logger -t barman"
   tags: cron
