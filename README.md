@@ -37,3 +37,10 @@ barman list-backup all|grep '\s-\sFAILED$'| {
     done
 }
 ```
+
+# Manual recovery example
+
+```bash
+barman list-backup all
+barman recover --remote-ssh-command "ssh postgres@psqlhost.local" main latest /var/lib/postgresql/9.3/main
+```
