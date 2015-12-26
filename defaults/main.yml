@@ -20,3 +20,5 @@ postgres_confirm_service_restart: yes
 postgres_restart_params:
   archive_mode: "on"
   wal_level: "{{ postgres_wal_level }}"
+
+postgres_host_ssh_port: 22
