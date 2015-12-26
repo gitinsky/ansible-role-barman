@@ -41,7 +41,7 @@
   tags: psql
 
 - name: Allow connections
-  lineinfile: dest=/etc/postgresql/9.3/main/pg_hba.conf
+  lineinfile: dest=/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf
               state=present
               regexp="\s*host\s+all\s+barman\s+{{ barman_ip }}\/32"
               line="host     all             barman          {{ barman_ip }}/32      md5"
