@@ -3,7 +3,7 @@
 - name: set up postgres
   gather_facts: no
   hosts: postgres
-  sudo: yes
+  become: yes
   tasks:
 
     - name: install PostgreSQL, postgresql-contrib and postgres ansible management requirements
@@ -23,13 +23,13 @@
 
     - service: name=postgresql state=started
 #     - postgresql_db: name=barmantest
-#       sudo_user: postgres
+#       become_user: postgres
 #     - postgresql_user: db=barmantest name=barman password=barman
-#       sudo_user: postgres
+#       become_user: postgres
 #
 
 - hosts: barman
-  sudo: yes
+  become: yes
   gather_facts: no
   vars:
       postgres_host: "{{ hostvars.postgres.ansible_eth1.ipv4.address }}"

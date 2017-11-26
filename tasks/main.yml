@@ -30,24 +30,27 @@
   template: src=barman.d/template.conf dest=/etc/barman.d/{{ postgres_host_name }}.conf
 
 - name: setup postgres server and access
-  include: postgres.yml
+  include_tasks: postgres.yml
 
 - name: check if there's a backup
   shell: barman show-backup {{ postgres_host_name }} latest
   register: latest_backup
   changed_when: latest_backup.rc != 0
   failed_when: false
-  sudo_user: barman
+  become_user: barman
+  become: yes
 
 - name: initiate backup for server if there're still 0 of them
   shell: barman backup {{ postgres_host_name }} | logger -t barman_{{ postgres_host_name }}
-  sudo_user: barman
+  become_user: barman
+  become: yes
   when: latest_backup.changed
 
 - name: check requirements
   shell: "barman check {{ postgres_host_name }}"
   changed_when: false
-  sudo_user: barman
+  become_user: barman
+  become: yes
 
 - name: remove default cron to add log support
   lineinfile: dest=/etc/cron.d/barman

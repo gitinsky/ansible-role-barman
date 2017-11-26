@@ -63,7 +63,8 @@
   ignore_errors: yes
   changed_when: postgres_restart_required.stdout == 't' or postgres_restart_required|failed
   delegate_to: "{{ postgres_host }}"
-  sudo_user: postgres
+  become_user: postgres
+  become: yes
   tags: psql
 
 - name: pause if restart requires confirmation
@@ -77,7 +78,7 @@
   when: postgres_restart_required.changed
   tags: psql
 
-- include: users.yml
+- include_tasks: users.yml
   tags: users
 
 # - debug: msg="'{{ postgres_include_dir_regex }}', '{{ postgres_include_dir }}'"
